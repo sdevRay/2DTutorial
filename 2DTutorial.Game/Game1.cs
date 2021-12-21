@@ -118,7 +118,34 @@ namespace _2DTutorial
             {
                 if (_players[i].IsAlive)
                 {
-                    _spriteBatch.Draw(_carriageTexture, _players[i].Position, null, _playerColors[i], 0, new Vector2(0, _carriageTexture.Height), _playerScaling, SpriteEffects.None, 0);
+                    int xPos = (int)_players[i].Position.X;
+                    int yPos = (int)_players[i].Position.Y;
+                    var cannonOrigin = new Vector2(11, 50);
+
+                    _spriteBatch.Draw(
+                        _carriageTexture, 
+                        _players[i].Position, 
+                        null, 
+                        _players[i].Color, 
+                        0, 
+                        new Vector2(0, _carriageTexture.Height),
+                        _playerScaling, 
+                        SpriteEffects.None, 
+                        0
+                        );
+
+
+                    _spriteBatch.Draw(
+                        _cannonTexture, 
+                        new Vector2(xPos + 20, yPos - 10), 
+                        null, 
+                        _players[i].Color, 
+                        _players[i].Angle, 
+                        cannonOrigin, 
+                        _playerScaling, 
+                        SpriteEffects.None, 
+                        1
+                        );
                 }
             }
         }
