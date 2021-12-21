@@ -28,6 +28,8 @@ namespace _2DTutorial
         private PlayerData[] _players;
         private float _playerScaling;
 
+        private int _currentPlayer = 0;
+
         private Color[] _playerColors = new Color[10]
         {
              Color.Red,
@@ -89,6 +91,7 @@ namespace _2DTutorial
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
+            ProcessKeyboard();
 
             base.Update(gameTime);
         }
@@ -149,6 +152,7 @@ namespace _2DTutorial
                 }
             }
         }
+
         private void SetUpPlayers()
         {
             _players = new PlayerData[_numPlayers];
@@ -168,5 +172,48 @@ namespace _2DTutorial
             _players[2].Position = new Vector2(300, 361);
             _players[3].Position = new Vector2(400, 164);
         }
+        
+        private void ProcessKeyboard()
+		{
+            var keybState = Keyboard.GetState();
+
+			if (keybState.IsKeyDown(Keys.Left))
+			{
+                _players[_currentPlayer].Angle -= 0.1f;
+			}
+			if (keybState.IsKeyDown(Keys.Right))
+			{
+                _players[_currentPlayer].Angle += 0.1f;
+			}
+
+            //Pi = 3.14 radians which correspond to 180 degrees, so PiOver2 radians corresponds to 90 degrees
+
+            if (_players[_currentPlayer].Angle > MathHelper.PiOver2)
+			{
+                _players[_currentPlayer].Angle = MathHelper.ToRadians(90);
+			}
+            if(_players[_currentPlayer].Angle < -MathHelper.PiOver2)
+			{
+                _players[_currentPlayer].Angle = MathHelper.ToRadians(-90);
+			}
+
+			if (keybState.IsKeyDown(Keys.Down))
+			{
+                _players[_currentPlayer].Power -= 1;
+			}
+			if (keybState.IsKeyDown(Keys.Up))
+			{
+                _players[_currentPlayer].Power += 1;
+			}
+
+            if(_players[_currentPlayer].Power > 1000)
+			{
+                _players[_currentPlayer].Power = 1000; 
+			}
+            if(_players[_currentPlayer].Power < 0)
+			{
+                _players[_currentPlayer].Power = 0;
+			}
+		}
     }
 }
