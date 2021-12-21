@@ -26,6 +26,7 @@ namespace _2DTutorial
         
         private int _numPlayers = 4;
         private PlayerData[] _players;
+        private float _playerScaling;
 
         private Color[] _playerColors = new Color[10]
         {
@@ -79,6 +80,8 @@ namespace _2DTutorial
             _carriageTexture = Content.Load<Texture2D>("carriage");
             _cannonTexture = Content.Load<Texture2D>("cannon");
 
+            // Since the width of each flat area on the terrain is 40 pixels, this scaling factor should scale the carriage so it fits on the flat area.
+            _playerScaling = 40.0f / (float)_carriageTexture.Width;
         }
 
         protected override void Update(GameTime gameTime)
@@ -115,7 +118,7 @@ namespace _2DTutorial
             {
                 if (_players[i].IsAlive)
                 {
-                    _spriteBatch.Draw(_carriageTexture, _players[i].Position, Color.White);
+                    _spriteBatch.Draw(_carriageTexture, _players[i].Position, null, _playerColors[i], 0, new Vector2(0, _carriageTexture.Height), _playerScaling, SpriteEffects.None, 0);
                 }
             }
         }
