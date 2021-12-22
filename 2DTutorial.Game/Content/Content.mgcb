@@ -61,3 +61,10 @@
 /processorParam:TextureFormat=Color
 /build:foreground.png
 
+#begin myFont.spritefont
+/importer:FontDescriptionImporter
+/processor:FontDescriptionProcessor
+/processorParam:PremultiplyAlpha=True
+/processorParam:TextureFormat=Compressed
+/build:myFont.spritefont
+

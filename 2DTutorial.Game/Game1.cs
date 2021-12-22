@@ -30,6 +30,8 @@ namespace _2DTutorial
 
         private int _currentPlayer = 0;
 
+        private SpriteFont _font;
+
         private Color[] _playerColors = new Color[10]
         {
              Color.Red,
@@ -82,6 +84,8 @@ namespace _2DTutorial
             _carriageTexture = Content.Load<Texture2D>("carriage");
             _cannonTexture = Content.Load<Texture2D>("cannon");
 
+            _font = Content.Load<SpriteFont>("myFont");
+
             // Since the width of each flat area on the terrain is 40 pixels, this scaling factor should scale the carriage so it fits on the flat area.
             _playerScaling = 40.0f / (float)_carriageTexture.Width;
         }
@@ -103,6 +107,7 @@ namespace _2DTutorial
             _spriteBatch.Begin();
             DrawScenery();
             DrawPlayers();
+            DrawText();
             _spriteBatch.End();
 
             base.Draw(gameTime);
@@ -152,6 +157,15 @@ namespace _2DTutorial
                 }
             }
         }
+
+        private void DrawText()
+		{
+            var player = _players[_currentPlayer];
+            int currentAngle = (int)MathHelper.ToDegrees(player.Angle);
+
+            _spriteBatch.DrawString(_font, "Cannon Angle: " + currentAngle.ToString(), new Vector2(20, 20), player.Color);
+            _spriteBatch.DrawString(_font, "Cannon Power: " + player.Power.ToString(), new Vector2(20, 45), player.Color);
+		}
 
         private void SetUpPlayers()
         {
