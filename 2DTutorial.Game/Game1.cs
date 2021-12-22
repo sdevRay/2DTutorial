@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
+using System.Collections.Generic;
 
 namespace _2DTutorial
 {
@@ -24,7 +25,11 @@ namespace _2DTutorial
         private Texture2D _foregroundTexture;
         private Texture2D _carriageTexture;
         private Texture2D _cannonTexture;
-        
+
+        private Texture2D _smokeTexture;
+        private List<Vector2> _smokeList = new List<Vector2>();
+        private Random _random = new Random();  
+
         private int _numPlayers = 4;
         private PlayerData[] _players;
         private float _playerScaling;
@@ -91,6 +96,7 @@ namespace _2DTutorial
             _cannonTexture = Content.Load<Texture2D>("cannon");
 
             _rocketTexture = Content.Load<Texture2D>("rocket");
+            _smokeTexture = Content.Load<Texture2D>("smoke");
 
             _font = Content.Load<SpriteFont>("myFont");
 
@@ -118,6 +124,7 @@ namespace _2DTutorial
             DrawPlayers();
             DrawText();
             DrawRocket();
+            DrawSmoke();
             _spriteBatch.End();
 
             base.Draw(gameTime);
@@ -195,6 +202,14 @@ namespace _2DTutorial
 			}
 		}
 
+        private void DrawSmoke()
+		{
+            for(int i = 0; i < _smokeList.Count; i++)
+			{
+                _spriteBatch.Draw(_smokeTexture, _smokeList[i], null, Color.White, 0, new Vector2(40, 35), 0.2f, SpriteEffects.None, 1);
+			}
+		}
+
         private void SetUpPlayers()
         {
             _players = new PlayerData[_numPlayers];
@@ -241,11 +256,11 @@ namespace _2DTutorial
 
 			if (keybState.IsKeyDown(Keys.Down))
 			{
-                _players[_currentPlayer].Power -= 1;
+                _players[_currentPlayer].Power -= 25;
 			}
 			if (keybState.IsKeyDown(Keys.Up))
 			{
-                _players[_currentPlayer].Power += 1;
+                _players[_currentPlayer].Power += 25;
 			}
 
             if(_players[_currentPlayer].Power > 1000)
@@ -266,9 +281,11 @@ namespace _2DTutorial
                 _rocketAngle = _players[_currentPlayer].Angle;
 
                 // https://github.com/simondarksidej/XNAGameStudio/wiki/Riemers2DXNA08angletodirection#firing-the-rocket
+                // A direction should have an X and Y component, indicating how many pixels horizontally and vertically the rocket should be moved each time.
                 var up = new Vector2(0, -1);
 
                 // A matrix is something you can multiply with a vector to obtain a transformed version of that vector. This creates a matrix containing a rotation around the Z axis. 
+                // MonoGame can give us a matrix containing our rotation, we can use this matrix to obtain the rotated version of our vector for the rocket.
                 var rotMatrix = Matrix.CreateRotationZ(_rocketAngle);
 
                 // This will take the original up direction, transform it with the rotation around the Z axis. 
@@ -282,8 +299,6 @@ namespace _2DTutorial
 		{
 			if (_rocketFlying)
 			{
-                //_rocketPosition += _rocketDirection;
-
                 // Add the effect of gravity to the direction
                 var gravity = new Vector2(0, 1);
                 _rocketDirection += gravity / 10.0f;
@@ -291,8 +306,18 @@ namespace _2DTutorial
                 // Add the direction to the position
                 _rocketPosition += _rocketDirection;
 
+                // https://github.com/simondarksidej/XNAGameStudio/wiki/Riemers2DXNA09directiontoangle#rotating-rocket-along-the-direction
+                // Change the angle based on the direction
+                // When gravity causes the Y axis to point down, this code reflcts that.
                 _rocketAngle = (float)Math.Atan2(_rocketDirection.X, -_rocketDirection.Y);
 
+                for(int i = 0; i < 5; i++)
+				{
+                    var smokePos = _rocketPosition;
+                    smokePos.X += _random.Next(10) - 5;
+                    smokePos.Y += _random.Next(10) - 5;
+                    _smokeList.Add(smokePos);
+				}
             }
         }
     }
