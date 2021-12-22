@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using System;
 
 namespace _2DTutorial
 {
@@ -27,11 +28,7 @@ namespace _2DTutorial
         private int _numPlayers = 4;
         private PlayerData[] _players;
         private float _playerScaling;
-
         private int _currentPlayer = 0;
-
-        private SpriteFont _font;
-
         private Color[] _playerColors = new Color[10]
         {
              Color.Red,
@@ -45,6 +42,15 @@ namespace _2DTutorial
              Color.Tomato,
              Color.Turquoise
         };
+
+        private SpriteFont _font;
+
+        private Texture2D _rocketTexture;
+        private bool _rocketFlying = false;
+        private Vector2 _rocketPosition;
+        private Vector2 _rocketDirection;
+        private float _rocketAngle;
+        private float _rocketScaling = 0.1f;
 
         private int _screenWidth;
         private int _screenHeight;
@@ -84,6 +90,8 @@ namespace _2DTutorial
             _carriageTexture = Content.Load<Texture2D>("carriage");
             _cannonTexture = Content.Load<Texture2D>("cannon");
 
+            _rocketTexture = Content.Load<Texture2D>("rocket");
+
             _font = Content.Load<SpriteFont>("myFont");
 
             // Since the width of each flat area on the terrain is 40 pixels, this scaling factor should scale the carriage so it fits on the flat area.
@@ -96,6 +104,7 @@ namespace _2DTutorial
                 Exit();
 
             ProcessKeyboard();
+            UpdateRocket();
 
             base.Update(gameTime);
         }
@@ -108,6 +117,7 @@ namespace _2DTutorial
             DrawScenery();
             DrawPlayers();
             DrawText();
+            DrawRocket();
             _spriteBatch.End();
 
             base.Draw(gameTime);
@@ -165,6 +175,24 @@ namespace _2DTutorial
 
             _spriteBatch.DrawString(_font, "Cannon Angle: " + currentAngle.ToString(), new Vector2(20, 20), player.Color);
             _spriteBatch.DrawString(_font, "Cannon Power: " + player.Power.ToString(), new Vector2(20, 45), player.Color);
+		}
+
+        private void DrawRocket()
+		{
+			if (_rocketFlying)
+			{
+                _spriteBatch.Draw(
+                    _rocketTexture, 
+                    _rocketPosition, 
+                    null, 
+                    _players[_currentPlayer].Color, 
+                    _rocketAngle, 
+                    new Vector2(42, 240), 
+                    _rocketScaling, 
+                    SpriteEffects.None, 
+                    1
+                    );
+			}
 		}
 
         private void SetUpPlayers()
@@ -228,6 +256,44 @@ namespace _2DTutorial
 			{
                 _players[_currentPlayer].Power = 0;
 			}
+
+            if(keybState.IsKeyDown(Keys.Enter) || keybState.IsKeyDown(Keys.Space))
+			{
+                _rocketFlying = true;
+                _rocketPosition = _players[_currentPlayer].Position;
+                _rocketPosition.X += 20;
+                _rocketPosition.Y -= 10;
+                _rocketAngle = _players[_currentPlayer].Angle;
+
+                // https://github.com/simondarksidej/XNAGameStudio/wiki/Riemers2DXNA08angletodirection#firing-the-rocket
+                var up = new Vector2(0, -1);
+
+                // A matrix is something you can multiply with a vector to obtain a transformed version of that vector. This creates a matrix containing a rotation around the Z axis. 
+                var rotMatrix = Matrix.CreateRotationZ(_rocketAngle);
+
+                // This will take the original up direction, transform it with the rotation around the Z axis. 
+                _rocketDirection = Vector2.Transform(up, rotMatrix);
+
+                _rocketDirection *= _players[_currentPlayer].Power / 50.0f;
+			}
 		}
+    
+        private void UpdateRocket()
+		{
+			if (_rocketFlying)
+			{
+                //_rocketPosition += _rocketDirection;
+
+                // Add the effect of gravity to the direction
+                var gravity = new Vector2(0, 1);
+                _rocketDirection += gravity / 10.0f;
+
+                // Add the direction to the position
+                _rocketPosition += _rocketDirection;
+
+                _rocketAngle = (float)Math.Atan2(_rocketDirection.X, -_rocketDirection.Y);
+
+            }
+        }
     }
 }
