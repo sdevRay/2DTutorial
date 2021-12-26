@@ -26,6 +26,8 @@ namespace _2DTutorial
         private Texture2D _carriageTexture;
         private Texture2D _cannonTexture;
 
+        private int[] _terrainContour;
+
         private Texture2D _smokeTexture;
         private List<Vector2> _smokeList = new List<Vector2>();
         private Random _random = new Random();  
@@ -67,6 +69,41 @@ namespace _2DTutorial
             IsMouseVisible = true;
         }
 
+        private void GenerateTerrainContour()
+        {
+            _terrainContour = new int[_screenWidth];
+
+            // Create horizontal line
+            for(int i = 0; i < _screenWidth; i++)
+            {
+                _terrainContour[i] = _screenHeight / 2;
+            }
+        }
+
+        private void CreateForeground()
+        {
+            var foregroundColors = new Color[_screenWidth * _screenHeight];
+
+            for(int x = 0; x < _screenWidth; x++)
+            {
+                for(int y = 0; y < _screenHeight; y++)
+                {
+                    // Check if below horizontal line
+                    if(y > _terrainContour[x])
+                    {
+                        foregroundColors[x + y * _screenWidth] = Color.Green;
+                    }
+                    else
+                    {
+                        foregroundColors[x + y * _screenWidth] = Color.Transparent;
+                    }
+                }
+            }
+
+            _foregroundTexture = new Texture2D(_device, _screenWidth, _screenHeight, false, SurfaceFormat.Color);
+            _foregroundTexture.SetData(foregroundColors);
+        }
+
         protected override void Initialize()
         {
             _graphics.PreferredBackBufferWidth = 500;
@@ -90,7 +127,7 @@ namespace _2DTutorial
             SetUpPlayers();
 
             _backgroundTexture = Content.Load<Texture2D>("background");
-            _foregroundTexture = Content.Load<Texture2D>("foreground");
+            //_foregroundTexture = Content.Load<Texture2D>("foreground");
 
             _carriageTexture = Content.Load<Texture2D>("carriage");
             _cannonTexture = Content.Load<Texture2D>("cannon");
@@ -100,6 +137,8 @@ namespace _2DTutorial
 
             _font = Content.Load<SpriteFont>("myFont");
 
+            GenerateTerrainContour();
+            CreateForeground();
             // Since the width of each flat area on the terrain is 40 pixels, this scaling factor should scale the carriage so it fits on the flat area.
             _playerScaling = 40.0f / (float)_carriageTexture.Width;
         }
