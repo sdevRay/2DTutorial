@@ -30,7 +30,7 @@ namespace _2DTutorial
 
         private Texture2D _smokeTexture;
         private List<Vector2> _smokeList = new List<Vector2>();
-        private Random _random = new Random();  
+        private Random _random = new Random();
 
         private int _numPlayers = 4;
         private PlayerData[] _players;
@@ -73,10 +73,33 @@ namespace _2DTutorial
         {
             _terrainContour = new int[_screenWidth];
 
-            // Create horizontal line
-            for(int i = 0; i < _screenWidth; i++)
+            // The offset is the easiest one, as it simply sets the position of the midheight of the wave.
+            float offset = _screenHeight / 2;
+            // The peakheight value is multiplied by the output of the Sine function, so it defines how high the wave will be.
+            float peakheight = 100;
+            // Finally, the flatness value has an impact on the influence of X, which slows down or speeds up the wave. This increases or decreases the wavelength of our wave.
+            float flatness = 70;
+
+            double rand1 = _random.NextDouble() + 1;
+            double rand2 = _random.NextDouble() + 2;
+            double rand3 = _random.NextDouble() + 3;
+
+            for (int x = 0; x < _screenWidth; x++)
             {
-                _terrainContour[i] = _screenHeight / 2;
+                //double height = peakheight * Math.Sin((float)x / flatness) + offset;
+                //_terrainContour[x] = (int)height;
+
+                // We first draw a random value between 0 and 1 together with an offset making the first wave between the [0,1] range
+                var height = peakheight / rand1 * Math.Sin((float)x / flatness * rand1 + rand1);
+
+                // We add a second wave between the [1,2] range
+                height += peakheight / rand2 * Math.Sin((float)x / flatness * rand2 + rand2);
+
+                // And finally, the last wave between the[2, 3] range.
+                height += peakheight / rand3 * Math.Sin((float)x / flatness * rand3 + rand3);
+                height += offset;
+
+                _terrainContour[x] = (int)height;
             }
         }
 
@@ -84,12 +107,12 @@ namespace _2DTutorial
         {
             var foregroundColors = new Color[_screenWidth * _screenHeight];
 
-            for(int x = 0; x < _screenWidth; x++)
+            for (int x = 0; x < _screenWidth; x++)
             {
-                for(int y = 0; y < _screenHeight; y++)
+                for (int y = 0; y < _screenHeight; y++)
                 {
                     // Check if below horizontal line
-                    if(y > _terrainContour[x])
+                    if (y > _terrainContour[x])
                     {
                         foregroundColors[x + y * _screenWidth] = Color.Green;
                     }
@@ -102,6 +125,22 @@ namespace _2DTutorial
 
             _foregroundTexture = new Texture2D(_device, _screenWidth, _screenHeight, false, SurfaceFormat.Color);
             _foregroundTexture.SetData(foregroundColors);
+        }
+
+        private void FlattenTerrainBelowPlayers()
+        {
+            // For each active player, the terrain underneath the cannon is levelled to the same height as the bottom-left point.
+
+            foreach (var player in _players)
+            {
+                if (player.IsAlive)
+                {
+                    for(int i = 0; i < 40; i++)
+                    {
+                        _terrainContour[(int)player.Position.X + i] = _terrainContour[(int)player.Position.X];
+                    }
+                }
+            }
         }
 
         protected override void Initialize()
@@ -124,7 +163,6 @@ namespace _2DTutorial
             _screenWidth = _device.PresentationParameters.BackBufferWidth;
             _screenHeight = _device.PresentationParameters.BackBufferHeight;
 
-            SetUpPlayers();
 
             _backgroundTexture = Content.Load<Texture2D>("background");
             //_foregroundTexture = Content.Load<Texture2D>("foreground");
@@ -138,7 +176,10 @@ namespace _2DTutorial
             _font = Content.Load<SpriteFont>("myFont");
 
             GenerateTerrainContour();
+            SetUpPlayers();
+            FlattenTerrainBelowPlayers();
             CreateForeground();
+            
             // Since the width of each flat area on the terrain is 40 pixels, this scaling factor should scale the carriage so it fits on the flat area.
             _playerScaling = 40.0f / (float)_carriageTexture.Width;
         }
@@ -178,7 +219,7 @@ namespace _2DTutorial
 
         private void DrawPlayers()
         {
-            for(int i = 0; i < _players.Length; i++)
+            for (int i = 0; i < _players.Length; i++)
             {
                 if (_players[i].IsAlive)
                 {
@@ -187,27 +228,27 @@ namespace _2DTutorial
                     var cannonOrigin = new Vector2(11, 50);
 
                     _spriteBatch.Draw(
-                        _carriageTexture, 
-                        _players[i].Position, 
-                        null, 
-                        _players[i].Color, 
-                        0, 
-                        new Vector2(0, _carriageTexture.Height),
-                        _playerScaling, 
-                        SpriteEffects.None, 
+                        _carriageTexture,
+                        _players[i].Position,
+                        null,
+                        _players[i].Color,
+                        0,
+                        new Vector2(0, _carriageTexture.Height), // Makes the origion the bottm-left corner
+                        _playerScaling,
+                        SpriteEffects.None,
                         0
                         );
 
 
                     _spriteBatch.Draw(
-                        _cannonTexture, 
-                        new Vector2(xPos + 20, yPos - 10), 
-                        null, 
-                        _players[i].Color, 
-                        _players[i].Angle, 
-                        cannonOrigin, 
-                        _playerScaling, 
-                        SpriteEffects.None, 
+                        _cannonTexture,
+                        new Vector2(xPos + 20, yPos - 10),
+                        null,
+                        _players[i].Color,
+                        _players[i].Angle,
+                        cannonOrigin,
+                        _playerScaling,
+                        SpriteEffects.None,
                         1
                         );
                 }
@@ -215,104 +256,109 @@ namespace _2DTutorial
         }
 
         private void DrawText()
-		{
+        {
             var player = _players[_currentPlayer];
             int currentAngle = (int)MathHelper.ToDegrees(player.Angle);
 
             _spriteBatch.DrawString(_font, "Cannon Angle: " + currentAngle.ToString(), new Vector2(20, 20), player.Color);
             _spriteBatch.DrawString(_font, "Cannon Power: " + player.Power.ToString(), new Vector2(20, 45), player.Color);
-		}
+        }
 
         private void DrawRocket()
-		{
-			if (_rocketFlying)
-			{
+        {
+            if (_rocketFlying)
+            {
                 _spriteBatch.Draw(
-                    _rocketTexture, 
-                    _rocketPosition, 
-                    null, 
-                    _players[_currentPlayer].Color, 
-                    _rocketAngle, 
-                    new Vector2(42, 240), 
-                    _rocketScaling, 
-                    SpriteEffects.None, 
+                    _rocketTexture,
+                    _rocketPosition,
+                    null,
+                    _players[_currentPlayer].Color,
+                    _rocketAngle,
+                    new Vector2(42, 240),
+                    _rocketScaling,
+                    SpriteEffects.None,
                     1
                     );
-			}
-		}
+            }
+        }
 
         private void DrawSmoke()
-		{
-            for(int i = 0; i < _smokeList.Count; i++)
-			{
+        {
+            for (int i = 0; i < _smokeList.Count; i++)
+            {
                 _spriteBatch.Draw(_smokeTexture, _smokeList[i], null, Color.White, 0, new Vector2(40, 35), 0.2f, SpriteEffects.None, 1);
-			}
-		}
+            }
+        }
 
         private void SetUpPlayers()
         {
             _players = new PlayerData[_numPlayers];
             for (int i = 0; i < _numPlayers; i++)
             {
+                var xPos = _screenWidth / (_numPlayers + 1) * (i + 1);
                 _players[i] = new PlayerData()
                 {
                     IsAlive = true,
                     Color = _playerColors[i],
                     Angle = MathHelper.ToRadians(90),
-                    Power = 100
+                    Power = 100,
+                    Position = new Vector2(xPos, _terrainContour[xPos]),
+
                 };
+
+
             }
 
-            _players[0].Position = new Vector2(100, 193);
-            _players[1].Position = new Vector2(200, 212);
-            _players[2].Position = new Vector2(300, 361);
-            _players[3].Position = new Vector2(400, 164);
+            //_players[0].Position = new Vector2(100, 193);
+            //_players[1].Position = new Vector2(200, 212);
+            //_players[2].Position = new Vector2(300, 361);
+            //_players[3].Position = new Vector2(400, 164);
         }
-        
+
         private void ProcessKeyboard()
-		{
+        {
             var keybState = Keyboard.GetState();
 
-			if (keybState.IsKeyDown(Keys.Left))
-			{
+            if (keybState.IsKeyDown(Keys.Left))
+            {
                 _players[_currentPlayer].Angle -= 0.1f;
-			}
-			if (keybState.IsKeyDown(Keys.Right))
-			{
+            }
+            if (keybState.IsKeyDown(Keys.Right))
+            {
                 _players[_currentPlayer].Angle += 0.1f;
-			}
+            }
 
             //Pi = 3.14 radians which correspond to 180 degrees, so PiOver2 radians corresponds to 90 degrees
 
             if (_players[_currentPlayer].Angle > MathHelper.PiOver2)
-			{
+            {
                 _players[_currentPlayer].Angle = MathHelper.ToRadians(90);
-			}
-            if(_players[_currentPlayer].Angle < -MathHelper.PiOver2)
-			{
+            }
+            if (_players[_currentPlayer].Angle < -MathHelper.PiOver2)
+            {
                 _players[_currentPlayer].Angle = MathHelper.ToRadians(-90);
-			}
+            }
 
-			if (keybState.IsKeyDown(Keys.Down))
-			{
+            if (keybState.IsKeyDown(Keys.Down))
+            {
                 _players[_currentPlayer].Power -= 25;
-			}
-			if (keybState.IsKeyDown(Keys.Up))
-			{
+            }
+            if (keybState.IsKeyDown(Keys.Up))
+            {
                 _players[_currentPlayer].Power += 25;
-			}
+            }
 
-            if(_players[_currentPlayer].Power > 1000)
-			{
-                _players[_currentPlayer].Power = 1000; 
-			}
-            if(_players[_currentPlayer].Power < 0)
-			{
+            if (_players[_currentPlayer].Power > 1000)
+            {
+                _players[_currentPlayer].Power = 1000;
+            }
+            if (_players[_currentPlayer].Power < 0)
+            {
                 _players[_currentPlayer].Power = 0;
-			}
+            }
 
-            if(keybState.IsKeyDown(Keys.Enter) || keybState.IsKeyDown(Keys.Space))
-			{
+            if (keybState.IsKeyDown(Keys.Enter) || keybState.IsKeyDown(Keys.Space))
+            {
                 _rocketFlying = true;
                 _rocketPosition = _players[_currentPlayer].Position;
                 _rocketPosition.X += 20;
@@ -331,13 +377,13 @@ namespace _2DTutorial
                 _rocketDirection = Vector2.Transform(up, rotMatrix);
 
                 _rocketDirection *= _players[_currentPlayer].Power / 50.0f;
-			}
-		}
-    
+            }
+        }
+
         private void UpdateRocket()
-		{
-			if (_rocketFlying)
-			{
+        {
+            if (_rocketFlying)
+            {
                 // Add the effect of gravity to the direction
                 var gravity = new Vector2(0, 1);
                 _rocketDirection += gravity / 10.0f;
@@ -350,13 +396,13 @@ namespace _2DTutorial
                 // When gravity causes the Y axis to point down, this code reflcts that.
                 _rocketAngle = (float)Math.Atan2(_rocketDirection.X, -_rocketDirection.Y);
 
-                for(int i = 0; i < 5; i++)
-				{
+                for (int i = 0; i < 5; i++)
+                {
                     var smokePos = _rocketPosition;
                     smokePos.X += _random.Next(10) - 5;
                     smokePos.Y += _random.Next(10) - 5;
                     _smokeList.Add(smokePos);
-				}
+                }
             }
         }
     }
