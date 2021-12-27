@@ -21,6 +21,7 @@ namespace _2DTutorial
         private GraphicsDevice _device;
         private SpriteBatch _spriteBatch;
 
+        private Texture2D _groundTexture;
         private Texture2D _backgroundTexture;
         private Texture2D _foregroundTexture;
         private Texture2D _carriageTexture;
@@ -105,6 +106,8 @@ namespace _2DTutorial
 
         private void CreateForeground()
         {
+            Color[,] groundColors = Texture2Array(_groundTexture);
+
             var foregroundColors = new Color[_screenWidth * _screenHeight];
 
             for (int x = 0; x < _screenWidth; x++)
@@ -114,7 +117,9 @@ namespace _2DTutorial
                     // Check if below horizontal line
                     if (y > _terrainContour[x])
                     {
-                        foregroundColors[x + y * _screenWidth] = Color.Green;
+                        // foregroundColors[x + y * _screenWidth] = Color.Green;
+                        //foregroundColors[x + y * _screenWidth] = groundColors[x , y];
+                        foregroundColors[x + y * _screenWidth] = groundColors[x % _groundTexture.Width, y % _groundTexture.Height];
                     }
                     else
                     {
@@ -141,6 +146,23 @@ namespace _2DTutorial
                     }
                 }
             }
+        }
+
+        private Color[,] Texture2Array(Texture2D texture)
+        {
+            var colors1D = new Color[texture.Width * texture.Height];
+            texture.GetData(colors1D);
+
+            Color[,] colors2D = new Color[texture.Width, texture.Height];
+            for(int x= 0; x < texture.Width; x++)
+            {
+                for (int y = 0; y < texture.Height; y++)
+                {
+                    colors2D[x, y] = colors1D[x + y * texture.Width];
+                }
+            }
+
+            return colors2D;
         }
 
         protected override void Initialize()
@@ -172,6 +194,8 @@ namespace _2DTutorial
 
             _rocketTexture = Content.Load<Texture2D>("rocket");
             _smokeTexture = Content.Load<Texture2D>("smoke");
+
+            _groundTexture = Content.Load<Texture2D>("ground");
 
             _font = Content.Load<SpriteFont>("myFont");
 
