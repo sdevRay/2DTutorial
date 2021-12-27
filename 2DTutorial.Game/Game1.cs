@@ -70,6 +70,46 @@ namespace _2DTutorial
             IsMouseVisible = true;
         }
 
+        private Vector2 TexturesCollide(Color[,] tex1, Matrix mat1, Color[,] tex2, Matrix mat2)
+        {
+            var mat1to2 = mat1 * Matrix.Invert(mat2);
+
+            var width1 = tex1.GetLength(0);
+            var height1 = tex1.GetLength(1);
+
+            var width2 = tex2.GetLength(0);
+            var height2 = tex2.GetLength(1);
+
+            for(int x1 = 0; x1 < width1; x1++)
+            {
+                for(int y1 = 0; y1 < height1; y1++)
+                {
+                    var pos1 = new Vector2(x1, y1);
+                    var pos2 = Vector2.Transform(pos1, mat1to2);
+
+                    int x2 = (int)pos2.X;
+                    int y2 = (int)pos2.Y;
+
+                    if((x2 >= 0) && (x2 < width2))
+                    {
+                        if ((y2 >= 0) && (y2 < height2))
+                        {
+                            if(tex1[x1, y1].A > 0)
+                            {
+                                if(tex2[x2, y2].A > 0)
+                                {
+                                    return Vector2.Transform(pos1, mat1);
+                                }
+                            }
+                        }
+                    }
+                    
+                }
+            }
+
+            return new Vector2(-1, -1);
+        }
+
         private void GenerateTerrainContour()
         {
             _terrainContour = new int[_screenWidth];
