@@ -63,6 +63,11 @@ namespace _2DTutorial
         private int _screenWidth;
         private int _screenHeight;
 
+        private Color[,] _rocketColorArray;
+        private Color[,] _cannonColorArray;
+        private Color[,] _carriageColorArray;
+        private Color[,] _foregroundColorArray;
+
         public Game1()
         {
             _graphics = new GraphicsDeviceManager(this);
@@ -70,8 +75,74 @@ namespace _2DTutorial
             IsMouseVisible = true;
         }
 
+        private Vector2 CheckPlayerCollision()
+        {
+            var rocketMat = Matrix.CreateTranslation(-24, -240, 0) *
+                Matrix.CreateRotationZ(_rocketAngle) *
+                Matrix.CreateScale(_rocketScaling) *
+                Matrix.CreateTranslation(_rocketPosition.X, _rocketPosition.Y, 0);
+
+            for (int i = 0; i < _numPlayers; i++)
+            {
+                var player = _players[i];
+                if (player.IsAlive)
+                {
+                    if (i != _currentPlayer)
+                    {
+                        int xPos = (int)player.Position.X;
+                        int yPos = (int)player.Position.Y;
+
+                        var carriageMatrix = Matrix.CreateTranslation(0, -_carriageTexture.Height, 0) *
+                            Matrix.CreateScale(_playerScaling) *
+                            Matrix.CreateTranslation(xPos, yPos, 0);
+
+                        var carriageCollisionPoint = TexturesCollide(_carriageColorArray, carriageMatrix, _rocketColorArray, rocketMat);
+
+                        if (carriageCollisionPoint.X > -1)
+                        {
+                            _players[i].IsAlive = false;
+                            return carriageCollisionPoint;
+                        }
+
+                        var cannonMat = Matrix.CreateTranslation(-11, -50, 0) *
+                            Matrix.CreateRotationZ(player.Angle) *
+                            Matrix.CreateScale(_playerScaling) *
+                            Matrix.CreateTranslation(xPos + 20, yPos - 10, 0);
+
+                        var cannonCollisionPoint = TexturesCollide(_cannonColorArray, cannonMat, _rocketColorArray, rocketMat);
+
+                        if (cannonCollisionPoint.X > -1)
+                        {
+                            _players[i].IsAlive = false;
+                            return cannonCollisionPoint;
+                        }
+                    }
+                }
+            }
+
+            return new Vector2(-1, -1);
+        }
+
+        private Vector2 CheckTerrainTexture()
+        {
+            var rocketMat = Matrix.CreateTranslation(-24, -240, 0) *
+                Matrix.CreateRotationZ(_rocketAngle) *
+                Matrix.CreateScale(_rocketScaling) *
+                Matrix.CreateTranslation(_rocketPosition.X, _rocketPosition.Y, 0);
+
+            var terrMat = Matrix.Identity;
+
+            var terrianCollisionPoint = TexturesCollide(_rocketColorArray, rocketMat, _foregroundColorArray, terrMat);
+            return terrianCollisionPoint;
+        }
+
         private Vector2 TexturesCollide(Color[,] tex1, Matrix mat1, Color[,] tex2, Matrix mat2)
         {
+            // Using matrices, we need to transform a coordinate by mat1 and then by the inverse in mat2.
+
+            // We can obtain the matrix that is the combination of both by simply multiplying them. 
+            // Since the mat1to2 matrix is the combination of the mat1 and the inverse(mat2) matrices,
+            // transforming a coordinate from Image 1 by this matrix will immediately give us the coordinate in Image 2!
             var mat1to2 = mat1 * Matrix.Invert(mat2);
 
             var width1 = tex1.GetLength(0);
@@ -80,30 +151,37 @@ namespace _2DTutorial
             var width2 = tex2.GetLength(0);
             var height2 = tex2.GetLength(1);
 
-            for(int x1 = 0; x1 < width1; x1++)
+            for (int x1 = 0; x1 < width1; x1++)
             {
-                for(int y1 = 0; y1 < height1; y1++)
+                for (int y1 = 0; y1 < height1; y1++)
                 {
+                    // get the current pixel
                     var pos1 = new Vector2(x1, y1);
+
+                    // get the screen coordinate of this pixel from 
                     var pos2 = Vector2.Transform(pos1, mat1to2);
+
+
+                    // At this moment we now have 2 positions from the original images which we know if they are drawn to the same screen pixel.
+                    // All we need to do now is check whether they are both non-transparen
 
                     int x2 = (int)pos2.X;
                     int y2 = (int)pos2.Y;
 
-                    if((x2 >= 0) && (x2 < width2))
+                    if ((x2 >= 0) && (x2 < width2))
                     {
                         if ((y2 >= 0) && (y2 < height2))
                         {
-                            if(tex1[x1, y1].A > 0)
+                            if (tex1[x1, y1].A > 0)
                             {
-                                if(tex2[x2, y2].A > 0)
+                                if (tex2[x2, y2].A > 0)
                                 {
                                     return Vector2.Transform(pos1, mat1);
                                 }
                             }
                         }
                     }
-                    
+
                 }
             }
 
@@ -146,7 +224,7 @@ namespace _2DTutorial
 
         private void CreateForeground()
         {
-            Color[,] groundColors = Texture2Array(_groundTexture);
+            Color[,] groundColors = TextureTo2DArray(_groundTexture);
 
             var foregroundColors = new Color[_screenWidth * _screenHeight];
 
@@ -180,7 +258,7 @@ namespace _2DTutorial
             {
                 if (player.IsAlive)
                 {
-                    for(int i = 0; i < 40; i++)
+                    for (int i = 0; i < 40; i++)
                     {
                         _terrainContour[(int)player.Position.X + i] = _terrainContour[(int)player.Position.X];
                     }
@@ -188,13 +266,13 @@ namespace _2DTutorial
             }
         }
 
-        private Color[,] Texture2Array(Texture2D texture)
+        private Color[,] TextureTo2DArray(Texture2D texture)
         {
             var colors1D = new Color[texture.Width * texture.Height];
             texture.GetData(colors1D);
 
             Color[,] colors2D = new Color[texture.Width, texture.Height];
-            for(int x= 0; x < texture.Width; x++)
+            for (int x = 0; x < texture.Width; x++)
             {
                 for (int y = 0; y < texture.Height; y++)
                 {
@@ -239,11 +317,16 @@ namespace _2DTutorial
 
             _font = Content.Load<SpriteFont>("myFont");
 
+            _rocketColorArray = TextureTo2DArray(_rocketTexture);
+            _cannonColorArray = TextureTo2DArray(_cannonTexture);
+            _carriageColorArray = TextureTo2DArray(_carriageTexture);
+            _foregroundColorArray = TextureTo2DArray(_foregroundTexture);
+
             GenerateTerrainContour();
             SetUpPlayers();
             FlattenTerrainBelowPlayers();
             CreateForeground();
-            
+
             // Since the width of each flat area on the terrain is 40 pixels, this scaling factor should scale the carriage so it fits on the flat area.
             _playerScaling = 40.0f / (float)_carriageTexture.Width;
         }
