@@ -75,6 +75,52 @@ namespace _2DTutorial
             IsMouseVisible = true;
         }
 
+        private void NextPlayer()
+        {
+            //  if numberOfPlayers = 4, when 3 is incremented to 4 this will be reset to 0.
+            _currentPlayer = _currentPlayer + 1;
+            _currentPlayer = _currentPlayer % _numPlayers;
+
+
+            while (!_players[_currentPlayer].IsAlive)
+            {
+                _currentPlayer = ++_currentPlayer % _numPlayers;
+            }
+        }
+
+        private void CheckCollisions(GameTime gameTime)
+        {
+            if(CheckPlayerCollision().X > -1)
+            {
+                _rocketFlying = false;
+                _smokeList = new List<Vector2>();
+                NextPlayer();
+            }
+
+            if (CheckTerrainCollision().X > -1)
+            {
+                _rocketFlying = false;
+                _smokeList = new List<Vector2>();
+                NextPlayer();
+            }
+
+            if (CheckOutOfScreen())
+            {
+                _rocketFlying = false;
+                _smokeList = new List<Vector2>();
+                NextPlayer();
+            }
+        }
+
+        private bool CheckOutOfScreen()
+        {
+            var rocketOutOfScreen = _rocketPosition.Y > _screenHeight;
+            rocketOutOfScreen |= _rocketPosition.X < 0;
+            rocketOutOfScreen |= _rocketPosition.X > _screenWidth;
+
+            return rocketOutOfScreen;
+        }
+
         private Vector2 CheckPlayerCollision()
         {
             var rocketMat = Matrix.CreateTranslation(-24, -240, 0) *
@@ -123,7 +169,7 @@ namespace _2DTutorial
             return new Vector2(-1, -1);
         }
 
-        private Vector2 CheckTerrainTexture()
+        private Vector2 CheckTerrainCollision()
         {
             var rocketMat = Matrix.CreateTranslation(-24, -240, 0) *
                 Matrix.CreateRotationZ(_rocketAngle) *
@@ -305,7 +351,7 @@ namespace _2DTutorial
 
 
             _backgroundTexture = Content.Load<Texture2D>("background");
-            //_foregroundTexture = Content.Load<Texture2D>("foreground");
+           // _foregroundTexture = Content.Load<Texture2D>("foreground");
 
             _carriageTexture = Content.Load<Texture2D>("carriage");
             _cannonTexture = Content.Load<Texture2D>("cannon");
@@ -320,12 +366,12 @@ namespace _2DTutorial
             _rocketColorArray = TextureTo2DArray(_rocketTexture);
             _cannonColorArray = TextureTo2DArray(_cannonTexture);
             _carriageColorArray = TextureTo2DArray(_carriageTexture);
-            _foregroundColorArray = TextureTo2DArray(_foregroundTexture);
 
             GenerateTerrainContour();
             SetUpPlayers();
             FlattenTerrainBelowPlayers();
             CreateForeground();
+            _foregroundColorArray = TextureTo2DArray(_foregroundTexture);
 
             // Since the width of each flat area on the terrain is 40 pixels, this scaling factor should scale the carriage so it fits on the flat area.
             _playerScaling = 40.0f / (float)_carriageTexture.Width;
@@ -337,7 +383,12 @@ namespace _2DTutorial
                 Exit();
 
             ProcessKeyboard();
-            UpdateRocket();
+
+            if (_rocketFlying)
+            {
+                UpdateRocket();
+                CheckCollisions(gameTime);
+            }
 
             base.Update(gameTime);
         }
