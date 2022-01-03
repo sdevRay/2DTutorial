@@ -15,6 +15,18 @@ namespace _2DTutorial
         public float Power;
     }
 
+    public struct ParticleData
+	{
+        public float BirthTime;
+        public float MaxAge;
+        public Vector2 OriginalPosition;
+        public Vector2 Acceleration;
+        public Vector2 Direction;
+        public Vector2 Position;
+        public float Scaling;
+        public Color ModColor;
+	}
+
     public class Game1 : Game
     {
         private GraphicsDeviceManager _graphics;
@@ -26,6 +38,9 @@ namespace _2DTutorial
         private Texture2D _foregroundTexture;
         private Texture2D _carriageTexture;
         private Texture2D _cannonTexture;
+        private Texture2D _explosionTexture;
+
+        List<ParticleData> _particleList = new List<ParticleData> ();
 
         private int[] _terrainContour;
 
@@ -75,7 +90,86 @@ namespace _2DTutorial
             IsMouseVisible = true;
         }
 
-        private void NextPlayer()
+        private void AddExplosion(Vector2 explosionPos, int numOfParticles, float size, float maxAge, GameTime gameTime)
+		{
+            for(int i = 0; i < numOfParticles; i++)
+			{
+                AddExplsionParticle(explosionPos, size, maxAge, gameTime);
+			}
+		}
+
+		private void AddExplsionParticle(Vector2 explosionPos, float explosionSize, float maxAge, GameTime gameTime)
+		{
+            var particle = new ParticleData()
+            {
+                OriginalPosition = explosionPos,
+                Position = explosionPos,
+                BirthTime = (float)gameTime.TotalGameTime.TotalMilliseconds,
+                MaxAge = maxAge,
+                Scaling = 0.25f,
+                ModColor = Color.White
+            };
+            //First, we will start by determining how far the current particle should have traveled at the end of its life, we want a random value between 0 and the maximum size of the explosion.
+            var particleDistance = (float)_random.NextDouble() * explosionSize;
+
+            //We will use this particleDistance variable as the length of our direction, the only thing we need to do is rotate this over a random angle. This is done with the next three lines, first, we define a Down vector of the length found in the first line.Next, we generate a random angle, and use this random angle to create a rotation matrix, as explained in the "Angle to Direction" chapter, which is used to rotate the Down vector over the random angle.
+            var displacement = new Vector2(particleDistance, 0);
+
+            var angle = MathHelper.ToRadians(_random.Next(300));
+            displacement = Vector2.Transform(displacement, Matrix.CreateRotationZ(angle));
+
+            //particle.Direction = displacement;
+            //particle.Acceleration = 3.0f * particle.Direction;
+
+            particle.Direction = displacement * 2.0f;
+            particle.Acceleration = -particle.Direction;
+
+            _particleList.Add(particle);
+		}
+
+        private void DrawExplosion()
+		{
+            for(int i = 0; i < _particleList.Count; i++)
+			{
+                var particle = _particleList[i];
+                _spriteBatch.Draw(_explosionTexture, particle.Position, null, particle.ModColor, i, new Vector2(256, 256), particle.Scaling, SpriteEffects.None, 1);
+			}
+		}
+
+        private void UpdateParticles(GameTime gameTime)
+		{
+            var now = (float)gameTime.TotalGameTime.TotalMilliseconds;
+            for(int i = _particleList.Count - 1; i >= 0 ; i--)
+			{
+                var particle = _particleList[i];
+                var timeAlive = now - particle.BirthTime;
+
+                if(timeAlive > particle.MaxAge)
+				{
+                    _particleList.RemoveAt(i);
+
+				}
+				else
+				{
+                    //  However, when working with time, we usually want to scale the time to a value between 0 and 1, where 0 means ‘begin’ and 1 means ‘end’, which will make a lot of the calculations easier.
+                    var relAge = timeAlive / particle.MaxAge;
+
+                    particle.Position = 0.5f * particle.Acceleration * relAge * relAge + particle.Direction * relAge + particle.OriginalPosition;
+                    var invAge = 1.0f - relAge;
+
+                    particle.ModColor = new Color(new Vector4(invAge, invAge, invAge, invAge));
+
+                    var posFromCenter = particle.Position - particle.OriginalPosition;
+                    var distance = posFromCenter.Length();
+
+                    particle.Scaling = (50.0f + distance) / 200.0f;
+
+                    _particleList[i] = particle;
+                }
+			}
+		}
+
+		private void NextPlayer()
         {
             //  if numberOfPlayers = 4, when 3 is incremented to 4 this will be reset to 0.
             _currentPlayer = _currentPlayer + 1;
@@ -90,17 +184,21 @@ namespace _2DTutorial
 
         private void CheckCollisions(GameTime gameTime)
         {
-            if(CheckPlayerCollision().X > -1)
+            var playerCollisionCoord = CheckPlayerCollision();
+            if (playerCollisionCoord.X > -1)
             {
                 _rocketFlying = false;
                 _smokeList = new List<Vector2>();
+                AddExplosion(playerCollisionCoord, 10, 80.0f, 2000.0f, gameTime);
                 NextPlayer();
             }
 
-            if (CheckTerrainCollision().X > -1)
+            var terrainCollisionCoord = CheckTerrainCollision();
+            if (terrainCollisionCoord.X > -1)
             {
                 _rocketFlying = false;
                 _smokeList = new List<Vector2>();
+                AddExplosion(terrainCollisionCoord, 4, 30.0f, 1000.0f, gameTime);
                 NextPlayer();
             }
 
@@ -367,6 +465,8 @@ namespace _2DTutorial
             _cannonColorArray = TextureTo2DArray(_cannonTexture);
             _carriageColorArray = TextureTo2DArray(_carriageTexture);
 
+            _explosionTexture = Content.Load<Texture2D>("explosion");
+
             GenerateTerrainContour();
             SetUpPlayers();
             FlattenTerrainBelowPlayers();
@@ -382,13 +482,22 @@ namespace _2DTutorial
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
-            ProcessKeyboard();
 
             if (_rocketFlying)
             {
                 UpdateRocket();
                 CheckCollisions(gameTime);
             }
+
+            if(_particleList.Count > 0)
+			{
+                UpdateParticles(gameTime);
+			}
+
+			if (!_rocketFlying && _particleList.Count == 0)
+			{
+                ProcessKeyboard();
+			}
 
             base.Update(gameTime);
         }
@@ -403,6 +512,10 @@ namespace _2DTutorial
             DrawText();
             DrawRocket();
             DrawSmoke();
+            _spriteBatch.End();
+
+            _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Additive);
+            DrawExplosion();
             _spriteBatch.End();
 
             base.Draw(gameTime);
