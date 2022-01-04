@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
@@ -84,6 +85,13 @@ namespace _2DTutorial
         private Color[,] _foregroundColorArray;
 
         private Color[,] _explosionColorArray;
+
+        private SoundEffect _hitCannon;
+        private SoundEffect _hitTerrain;
+        private SoundEffect _launch;
+
+        private const bool _resolutionIndependent = false;
+        private Vector2 _baseScreenSize = new Vector2(800, 600);
 
         public Game1()
         {
@@ -237,6 +245,8 @@ namespace _2DTutorial
                 _smokeList = new List<Vector2>();
                 AddExplosion(playerCollisionCoord, 10, 80.0f, 2000.0f, gameTime);
                 NextPlayer();
+
+                _hitCannon.Play();
             }
 
             var terrainCollisionCoord = CheckTerrainCollision();
@@ -246,6 +256,8 @@ namespace _2DTutorial
                 _smokeList = new List<Vector2>();
                 AddExplosion(terrainCollisionCoord, 4, 30.0f, 1000.0f, gameTime);
                 NextPlayer();
+
+                _hitTerrain.Play();
             }
 
             if (CheckOutOfScreen())
@@ -490,9 +502,21 @@ namespace _2DTutorial
             _spriteBatch = new SpriteBatch(GraphicsDevice);
             _device = _graphics.GraphicsDevice;
 
-            _screenWidth = _device.PresentationParameters.BackBufferWidth;
-            _screenHeight = _device.PresentationParameters.BackBufferHeight;
 
+			if (_resolutionIndependent)
+			{
+                _screenWidth = (int)_baseScreenSize.X;
+                _screenHeight = (int)_baseScreenSize.Y;
+			}
+			else
+			{
+                _screenWidth = _device.PresentationParameters.BackBufferWidth;
+                _screenHeight = _device.PresentationParameters.BackBufferHeight;
+			}
+
+            _hitCannon = Content.Load<SoundEffect>("hitcannon");
+            _hitTerrain = Content.Load<SoundEffect>("hitterrain");
+            _launch = Content.Load<SoundEffect>("launch");
 
             _backgroundTexture = Content.Load<Texture2D>("background");
            // _foregroundTexture = Content.Load<Texture2D>("foreground");
@@ -521,6 +545,8 @@ namespace _2DTutorial
             _explosionColorArray = TextureTo2DArray(_explosionTexture);
             // Since the width of each flat area on the terrain is 40 pixels, this scaling factor should scale the carriage so it fits on the flat area.
             _playerScaling = 40.0f / (float)_carriageTexture.Width;
+
+           
         }
 
         protected override void Update(GameTime gameTime)
@@ -552,7 +578,19 @@ namespace _2DTutorial
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
-            _spriteBatch.Begin();
+            Vector3 screenScalingFactor;
+			if (_resolutionIndependent)
+			{
+                var horScaling = (float)_device.PresentationParameters.BackBufferWidth / _baseScreenSize.X;
+                var verScaling = (float)_device.PresentationParameters.BackBufferHeight / _baseScreenSize.Y;
+                screenScalingFactor = new Vector3(horScaling, verScaling, 1);
+			}
+            else {
+                screenScalingFactor = new Vector3(1, 1, 1);
+			}
+            var globalTransformation = Matrix.CreateScale(screenScalingFactor);
+
+            _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, null, null, null, null, globalTransformation);
             DrawScenery();
             DrawPlayers();
             DrawText();
@@ -560,7 +598,7 @@ namespace _2DTutorial
             DrawSmoke();
             _spriteBatch.End();
 
-            _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Additive);
+            _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Additive, null, null, null, null, globalTransformation);
             DrawExplosion();
             _spriteBatch.End();
 
@@ -734,6 +772,8 @@ namespace _2DTutorial
                 _rocketDirection = Vector2.Transform(up, rotMatrix);
 
                 _rocketDirection *= _players[_currentPlayer].Power / 50.0f;
+
+                _launch.Play();
             }
         }
 
