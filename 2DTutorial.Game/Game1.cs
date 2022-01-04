@@ -83,6 +83,8 @@ namespace _2DTutorial
         private Color[,] _carriageColorArray;
         private Color[,] _foregroundColorArray;
 
+        private Color[,] _explosionColorArray;
+
         public Game1()
         {
             _graphics = new GraphicsDeviceManager(this);
@@ -90,12 +92,56 @@ namespace _2DTutorial
             IsMouseVisible = true;
         }
 
+        private void AddCrater(Color[,] tex, Matrix mat)
+		{
+            int width = tex.GetLength(0);
+            int height = tex.GetLength(1);
+
+            for(int x = 0; x < width; x++)
+			{
+                for(int y = 0; y < height; y++)
+				{
+                    if(tex[x,y].R > 10)
+					{
+                        var imagePos = new Vector2(x, y); // Get the pixel
+                        var screenPos = Vector2.Transform(imagePos, mat); // Get the screen coordinate
+
+                        int screenX = (int)screenPos.X;
+                        int screenY = (int)screenPos.Y;
+
+                        if(screenX > 0 && screenX < _screenWidth)
+						{
+                            if(_terrainContour[screenX] < screenY)
+							{
+                                _terrainContour[screenX] = screenY;
+							}
+						}
+
+
+					}
+				}
+			}
+		}
+
         private void AddExplosion(Vector2 explosionPos, int numOfParticles, float size, float maxAge, GameTime gameTime)
 		{
             for(int i = 0; i < numOfParticles; i++)
 			{
                 AddExplsionParticle(explosionPos, size, maxAge, gameTime);
 			}
+
+            var rotation = (float)_random.Next(10);
+
+            var mat = Matrix.CreateTranslation(-_explosionTexture.Width / 2, -_explosionTexture.Height / 2, 0) * Matrix.CreateRotationZ(rotation) * Matrix.CreateScale(size / (float)_explosionTexture.Width * 2.0f) * Matrix.CreateTranslation(explosionPos.X, explosionPos.Y, 0);
+
+            AddCrater(_explosionColorArray, mat);
+
+            for(int i = 0; i < _players.Length; i++)
+			{
+                _players[i].Position.Y = _terrainContour[(int)_players[i].Position.X];
+			}
+            FlattenTerrainBelowPlayers();
+            CreateForeground();
 		}
 
 		private void AddExplsionParticle(Vector2 explosionPos, float explosionSize, float maxAge, GameTime gameTime)
@@ -472,7 +518,7 @@ namespace _2DTutorial
             FlattenTerrainBelowPlayers();
             CreateForeground();
             _foregroundColorArray = TextureTo2DArray(_foregroundTexture);
-
+            _explosionColorArray = TextureTo2DArray(_explosionTexture);
             // Since the width of each flat area on the terrain is 40 pixels, this scaling factor should scale the carriage so it fits on the flat area.
             _playerScaling = 40.0f / (float)_carriageTexture.Width;
         }
